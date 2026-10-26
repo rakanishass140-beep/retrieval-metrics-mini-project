@@ -1,43 +1,14 @@
 # Retrieval Metrics Mini Project
 
-Build a tiny evaluation tool that measures how good a search system is.
+This project compares keyword search and semantic search using Mean Reciprocal Rank (MRR) and Recall@10. The supplied ranked results and test queries are used as fixtures, so no database or API keys are needed.
 
-In this mini project you will implement `eval.js` so it scores two search systems, keyword search and semantic search, on the same set of test queries, computes **MRR** and **Recall@10** for each, and prints a **markdown comparison table**. No database or API keys are needed: the two systems' ranked results are already captured for you as data, so you can focus on the metrics themselves.
-
-## What is in this project
-
-- `eval.js` : the file you build. It has four TODOs; the file-loading is done for you.
-- `test-set.csv` : 10 `(query, correct_post_ids)` pairs. A row may list more than one correct answer, semicolon-separated (for example `1024;1025`).
-- `search-results.json` : for each query, the top-10 ranked `post_id` list each system returned, shaped as `{ "<query>": { "keyword": [...], "semantic": [...] } }`. Array position 0 is rank 1.
-- `posts-dataset.csv` : the 35 posts the ids refer to (for sanity-checking; not required by the core build).
-
-## What to build
-
-1. **Load** `test-set.csv` and `search-results.json` (already wired up in the starter).
-2. **Reciprocal Rank:** for one query, return `1 / rank` of the first correct id in a ranked list, or `0` if no correct id is in the top 10 (rank is 1-based).
-3. **Evaluation loop:** for every query, compute the reciprocal rank for the keyword and semantic lists and count a hit whenever the correct answer is in the top 10. Then compute, for each system:
-   - **MRR** = average reciprocal rank across all 10 queries.
-   - **Recall@10** = (queries whose correct answer is in the top 10) / 10.
-4. **Print a markdown comparison table:** one row per query with keyword and semantic ranks (`miss` when not found), then a **Summary** row with each system's MRR and Recall@10 rounded to two decimals.
-
-## Formulas
-
-```text
-Reciprocal Rank (one query) = 1 / (rank of the first correct answer)
-                            = 0   if the correct answer is not in the top 10
-MRR       = average of the reciprocal ranks over all queries
-Recall@10 = (queries whose correct answer is in the top 10) / (total queries)
-```
-
-## Run it
+## Run
 
 ```bash
 node eval.js
 ```
 
-## Expected output
-
-A correct `eval.js` prints exactly this table. If your numbers differ, your metric code has a bug.
+## Results
 
 ```text
 | Query | Keyword rank | Semantic rank |
@@ -55,28 +26,6 @@ A correct `eval.js` prints exactly this table. If your numbers differ, your metr
 | **Summary** | **MRR 0.30 · Recall@10 0.60** | **MRR 0.67 · Recall@10 1.00** |
 ```
 
-## Write up your findings
+## Interpretation
 
-Add a short interpretation (4 to 6 sentences) to this README or a `RESULT.md`:
-- Which system is better overall, and on which metric(s)?
-- Which queries did keyword search win, and what do those queries have in common?
-- Which queries did semantic search win, and what do those have in common?
-- One sentence on why a team would still keep the weaker system around (hint: the two systems win on different queries).
-
-## Take it further (optional)
-
-If you have a working Postgres with the posts loaded and embeddings generated, swap `search-results.json` for real searches:
-
-```sql
--- Keyword search (PG full-text)
-SELECT post_id
-FROM posts
-WHERE to_tsvector('english', title || ' ' || body) @@ plainto_tsquery('english', $1)
-ORDER BY ts_rank(to_tsvector('english', title || ' ' || body), plainto_tsquery('english', $1)) DESC
-LIMIT 10;
-
--- Semantic search (pgvector)
-SELECT post_id FROM posts ORDER BY embedding <=> $1 LIMIT 10;
-```
-
-Wire each into `async keywordSearch(query)` and `async semanticSearch(query)` returning ranked `post_id` lists, then run your exact same metric code. The metrics do not change, only where the ranked lists come from.
+Semantic search performs better overall: its MRR is 0.67 compared with keyword search's 0.30, and its Recall@10 is 1.00 versus 0.60, meaning it retrieves a relevant result for every query and tends to rank it higher. Keyword search wins on “redis or memcached for caching” and “sql or nosql for a new product,” which contain explicit product or technology names that exact term matching can capture well. Semantic search wins on the remaining queries, which often describe a problem or intent in conversational language rather than using the precise wording of a relevant post. The semantic system also finds relevant results for all four queries keyword search misses. A team may still retain keyword search because exact terms and named technologies can make it especially effective for particular queries, complementing semantic retrieval.
